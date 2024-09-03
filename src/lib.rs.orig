@@ -6,6 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+<<<<<<< HEAD
+pub struct Uart {}
+
+impl Uart {}
+=======
 use bitflags::bitflags;
 use core::fmt::{self, Write};
 use core::hint::spin_loop;
@@ -121,6 +126,7 @@ impl Uart {
     }
 
     /// TODO: implement init
+    /// TODO: crash context vs non-crash context?
 
     /// Writes a single byte to the UART.
     pub fn write_byte(&self, byte: u8) {
@@ -175,3 +181,4 @@ impl Write for Uart {
 
 // SAFETY: `Uart` just contains a pointer to device memory, which can be accessed from any context.
 unsafe impl Send for Uart {}
+>>>>>>> 4c2140c (wip: add initial driver)
