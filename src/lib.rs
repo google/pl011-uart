@@ -6,10 +6,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-pub struct Uart {
+pub struct Uart {}
 
-}
-
-impl Uart {
-
-}
+impl Uart {}
