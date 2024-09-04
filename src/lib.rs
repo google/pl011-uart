@@ -10,9 +10,11 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use bitflags::bitflags;
-use core::fmt::{self, Write};
+use core::convert::Infallible;
+use core::fmt;
 use core::hint::spin_loop;
 use core::ptr::{addr_of, addr_of_mut};
+use embedded_io::{ErrorType, Read, ReadReady, Write, WriteReady};
 
 bitflags! {
     /// Flags from the UART flag register
@@ -167,7 +169,7 @@ impl Uart {
     }
 }
 
-impl Write for Uart {
+impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.as_bytes() {
             self.write_byte(*c);
@@ -178,3 +180,49 @@ impl Write for Uart {
 
 // SAFETY: `Uart` just contains a pointer to device memory, which can be accessed from any context.
 unsafe impl Send for Uart {}
+
+impl ErrorType for Uart {
+    type Error = Infallible;
+}
+
+impl Write for Uart {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        if buf.is_empty() {
+            Ok(0)
+        } else {
+            self.write_byte(buf[0]);
+            Ok(1)
+        }
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl WriteReady for Uart {
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(!self.flags().contains(Flags::TXFF))
+    }
+}
+
+impl Read for Uart {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        loop {
+            if let Some(byte) = self.read_byte() {
+                buf[0] = byte;
+                return Ok(1);
+            }
+        }
+    }
+}
+
+impl ReadReady for Uart {
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(!self.flags().contains(Flags::RXFE))
+    }
+}
