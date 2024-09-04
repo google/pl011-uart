@@ -128,7 +128,7 @@ impl Uart {
     /// TODO: implement init
 
     /// Writes a single byte to the UART.
-    pub fn write_byte(&self, byte: u8) {
+    pub fn write_byte(&mut self, byte: u8) {
         // Wait until there is room in the TX buffer.
         while self.flags().contains(Flags::TXFF) {
             spin_loop();
@@ -149,7 +149,7 @@ impl Uart {
 
     /// Reads and returns a pending byte, or `None` if nothing has been
     /// received.
-    pub fn read_byte(&self) -> Option<u8> {
+    pub fn read_byte(&mut self) -> Option<u8> {
         if self.flags().contains(Flags::RXFE) {
             None
         } else {
