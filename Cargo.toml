@@ -3,6 +3,14 @@ name = "pl011-rs"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+description = "A driver for the Arm PL011 UART."
+authors = [
+  "Anand Saminathan <anans@google.com>",
+  "Andrew Walbran <qwandor@google.com>",
+]
+repository = "https://github.com/google/pl011-rs"
+keywords = ["arm", "aarch64", "driver", "uart", "pl011"]
+categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 bitflags = "2.3.2"
