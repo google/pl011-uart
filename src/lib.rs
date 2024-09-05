@@ -156,6 +156,7 @@ impl Uart {
             // SAFETY: self.registers points to the control registers of a PL011 device which is
             // appropriately mapped, as promised by the caller of `Uart::new`.
             let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
+            // TODO: Check for error conditions in bits 8-11.
             Some(data as u8)
         }
     }
