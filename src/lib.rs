@@ -17,7 +17,7 @@ use core::ptr::{addr_of, addr_of_mut};
 use embedded_io::{ErrorType, Read, ReadReady, Write, WriteReady};
 
 bitflags! {
-    /// Flags from the UART flag register
+    /// Flags from the UART flag register.
     #[repr(transparent)]
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct Flags: u16 {
@@ -116,7 +116,7 @@ impl Uart {
     ///
     /// # Safety
     ///
-    /// The given base address must point to the MMIO control registers of a
+    /// The given base address must point to the 14 MMIO control registers of a
     /// PL011 device, which must be mapped into the address space of the process
     /// as device memory and not have any other aliases.
     pub unsafe fn new(base_address: *mut u32) -> Self {
@@ -128,7 +128,7 @@ impl Uart {
     /// TODO: implement init
 
     /// Writes a single byte to the UART.
-    pub fn write_byte(&self, byte: u8) {
+    pub fn write_byte(&mut self, byte: u8) {
         // Wait until there is room in the TX buffer.
         while self.flags().contains(Flags::TXFF) {
             spin_loop();
@@ -149,13 +149,14 @@ impl Uart {
 
     /// Reads and returns a pending byte, or `None` if nothing has been
     /// received.
-    pub fn read_byte(&self) -> Option<u8> {
+    pub fn read_byte(&mut self) -> Option<u8> {
         if self.flags().contains(Flags::RXFE) {
             None
         } else {
             // SAFETY: self.registers points to the control registers of a PL011 device which is
             // appropriately mapped, as promised by the caller of `Uart::new`.
             let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
+            // TODO: Check for error conditions in bits 8-11.
             Some(data as u8)
         }
     }
@@ -180,6 +181,10 @@ impl fmt::Write for Uart {
 
 // SAFETY: `Uart` just contains a pointer to device memory, which can be accessed from any context.
 unsafe impl Send for Uart {}
+
+// SAFETY: Methods on `&Uart` don't allow changing any state so are safe to call concurrently from
+// any context.
+unsafe impl Sync for Uart {}
 
 impl ErrorType for Uart {
     type Error = Infallible;
