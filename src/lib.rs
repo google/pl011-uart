@@ -181,6 +181,10 @@ impl fmt::Write for Uart {
 // SAFETY: `Uart` just contains a pointer to device memory, which can be accessed from any context.
 unsafe impl Send for Uart {}
 
+// SAFETY: Methods on `&Uart` don't allow changing any state so are safe to call concurrently from
+// any context.
+unsafe impl Sync for Uart {}
+
 impl ErrorType for Uart {
     type Error = Infallible;
 }
