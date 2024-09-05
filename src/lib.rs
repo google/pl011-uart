@@ -17,7 +17,7 @@ use core::ptr::{addr_of, addr_of_mut};
 use embedded_io::{ErrorType, Read, ReadReady, Write, WriteReady};
 
 bitflags! {
-    /// Flags from the UART flag register
+    /// Flags from the UART flag register.
     #[repr(transparent)]
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct Flags: u16 {
@@ -116,7 +116,7 @@ impl Uart {
     ///
     /// # Safety
     ///
-    /// The given base address must point to the MMIO control registers of a
+    /// The given base address must point to the 14 MMIO control registers of a
     /// PL011 device, which must be mapped into the address space of the process
     /// as device memory and not have any other aliases.
     pub unsafe fn new(base_address: *mut u32) -> Self {
