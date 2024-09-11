@@ -59,12 +59,45 @@ bitflags! {
     }
 }
 
+bitflags! {
+    /// Flags from the UART Control Register.
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Control: u16 {
+        /// UART Enable.
+        const UARTEN = 1 << 0;
+        /// Serial InfraRed (SIR) Enable.
+        const SIREN = 1 << 1;
+        /// Serial InfraRed (SIR) Low-power.
+        const SIRLP = 1 << 2;
+        /// Bits 6:3 are reserved.
+        /// Loopback Enable.
+        const LBE = 1 << 7;
+        /// Transmit Enable.
+        const TXE = 1 << 8;
+        /// Receive Enable.
+        const RXE = 1 << 9;
+        /// Data Transmit Ready.
+        const DTR = 1 << 10;
+        /// Request To Send.
+        const RTS = 1 << 11;
+        /// Complement of nUARTOut1
+        const OUT1 = 1 << 12;
+        /// Complement of nUARTOut2
+        const OUT2 = 1 << 13;
+        /// Request To Send (RTS) Hardware Flow Control Enable.
+        const RTSEN = 1 << 14;
+        /// Clear To Send (CTS) Hardware Flow Control Enable.
+        const CTSEN = 1 << 15;
+    }
+}
+
 #[repr(C, align(4))]
 struct Registers {
     /// Data Register.
     dr: u16,
     _reserved0: [u8; 2],
-    /// Receive Status Register.
+    /// Receive Status Register / Error Clear Register.
     rsr: ReceiveStatus,
     _reserved1: [u8; 19],
     /// Flag Register.
@@ -83,7 +116,7 @@ struct Registers {
     lcr_h: u8,
     _reserved6: [u8; 3],
     /// Control Register.
-    cr: u16,
+    cr: Control,
     _reserved7: [u8; 3],
     /// Interrupt FIFO Level Select Register.
     ifls: u8,
@@ -126,7 +159,32 @@ impl Uart {
         }
     }
 
-    /// TODO: implement init
+    /// Initializes PL011 UART.
+    ///
+    /// clock: Uart clock in Hz.
+    /// baud_rate: Baud rate.
+    pub fn init(&mut self, clock: u32, baud_rate: u32) {
+        let divisor = (clock << 2) / baud_rate;
+
+        // SAFETY: self.registers points to the control registers of a PL011 device which is
+        // appropriately mapped, as promised by the caller of `Uart::new`.
+        unsafe {
+            // Disable UART before programming.
+            let mut cr: Control = addr_of_mut!((*self.registers).cr).read_volatile();
+            cr &= !Control::UARTEN;
+            addr_of_mut!((*self.registers).cr).write_volatile(cr);
+            // Program Integer Baud Rate.
+            addr_of_mut!((*self.registers).ibrd).write_volatile((divisor >> 6).try_into().unwrap());
+            // Program Fractional Baud Rate.
+            addr_of_mut!((*self.registers).fbrd)
+                .write_volatile((divisor & 0x3F).try_into().unwrap());
+            // Clear any pending errors.
+            addr_of_mut!((*self.registers).rsr).write_volatile(ReceiveStatus::empty());
+            // Enable UART.
+            addr_of_mut!((*self.registers).cr)
+                .write_volatile(Control::RXE | Control::TXE | Control::UARTEN);
+        }
+    }
 
     /// Writes a single byte to the UART.
     pub fn write_byte(&mut self, byte: u8) {
