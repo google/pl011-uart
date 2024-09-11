@@ -187,6 +187,10 @@ impl Uart {
     }
 
     /// Writes a single byte to the UART.
+    ///
+    /// This blocks until there is space in the transmit FIFO or holding register, but returns as
+    /// soon as the byte has been written to the transmit FIFO or holding register. It doesn't wait
+    /// for the byte to be sent.
     pub fn write_byte(&mut self, byte: u8) {
         // Wait until there is room in the TX buffer.
         while self.flags().contains(Flags::TXFF) {
@@ -199,11 +203,13 @@ impl Uart {
             // Write to the TX buffer.
             addr_of_mut!((*self.registers).dr).write_volatile(u16::from(byte));
         }
+    }
 
-        // Wait until the UART is no longer busy.
-        while self.flags().contains(Flags::BUSY) {
-            spin_loop();
-        }
+    /// Returns whether the UART is currently transmitting data.
+    ///
+    /// This will be true immediately after calling [`write_byte`](Self::write_byte).
+    pub fn is_transmitting(&self) -> bool {
+        self.flags().contains(Flags::BUSY)
     }
 
     /// Reads and returns a pending byte, or `None` if nothing has been
@@ -219,8 +225,6 @@ impl Uart {
             Some(data as u8)
         }
     }
-
-    /// TODO: Implement flush?
 
     fn flags(&self) -> Flags {
         // SAFETY: self.registers points to the control registers of a PL011 device which is
@@ -260,6 +264,9 @@ impl Write for Uart {
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
+        while self.is_transmitting() {
+            spin_loop();
+        }
         Ok(())
     }
 }
