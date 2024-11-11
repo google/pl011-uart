@@ -11,7 +11,6 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use bitflags::bitflags;
-use core::convert::Infallible;
 use core::fmt;
 use core::hint::spin_loop;
 use core::ptr::{addr_of, addr_of_mut};
