@@ -156,15 +156,19 @@ struct Registers {
 }
 
 /// Errors which may occur reading from a PL011 UART.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error {
     /// Break condition detected.
+    #[error("Break condition detected")]
     Break,
     /// The received character did not have a valid stop bit.
+    #[error("Framing error, received character didn't have a valid stop bit")]
     Framing,
     /// Data was received while the FIFO was already full.
+    #[error("Overrun, data received while the FIFO was already full")]
     Overrun,
     /// Parity of the received data character did not match the selected parity.
+    #[error("Parity of the received data character did not match the selected parity")]
     Parity,
 }
 
