@@ -158,10 +158,10 @@ struct Registers {
 /// PL011 Errors
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    FramingError,
-    ParityError,
-    BreakError,
-    OverrunError,
+    Framing,
+    Parity,
+    Break,
+    Overrun,
 }
 
 impl embedded_io::Error for Error {
@@ -255,16 +255,16 @@ impl Uart {
             let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
             let error_status = Data::from_bits_truncate(data);
             if error_status.contains(Data::FE) {
-                return Err(Error::FramingError);
+                return Err(Error::Framing);
             }
             if error_status.contains(Data::PE) {
-                return Err(Error::ParityError);
+                return Err(Error::Parity);
             }
             if error_status.contains(Data::BE) {
-                return Err(Error::BreakError);
+                return Err(Error::Break);
             }
             if error_status.contains(Data::OE) {
-                return Err(Error::OverrunError);
+                return Err(Error::Overrun);
             }
             Ok(Some(data as u8))
         }
