@@ -11,7 +11,6 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use bitflags::bitflags;
-use core::convert::Infallible;
 use core::fmt;
 use core::hint::spin_loop;
 use core::ptr::{addr_of, addr_of_mut};
@@ -156,18 +155,29 @@ struct Registers {
     _reserved13: [u8; 3],
 }
 
-/// PL011 Errors
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+/// Errors which may occur reading from a PL011 UART.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error {
-    FramingError,
-    ParityError,
-    BreakError,
-    OverrunError,
+    /// Break condition detected.
+    #[error("Break condition detected")]
+    Break,
+    /// The received character did not have a valid stop bit.
+    #[error("Framing error, received character didn't have a valid stop bit")]
+    Framing,
+    /// Data was received while the FIFO was already full.
+    #[error("Overrun, data received while the FIFO was already full")]
+    Overrun,
+    /// Parity of the received data character did not match the selected parity.
+    #[error("Parity of the received data character did not match the selected parity")]
+    Parity,
 }
 
 impl embedded_io::Error for Error {
     fn kind(&self) -> ErrorKind {
-        ErrorKind::Other
+        match self {
+            Self::Break | Self::Overrun => ErrorKind::Other,
+            Self::Framing | Self::Parity => ErrorKind::InvalidData,
+        }
     }
 }
 
@@ -256,16 +266,16 @@ impl Uart {
             let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
             let error_status = Data::from_bits_truncate(data);
             if error_status.contains(Data::FE) {
-                return Err(Error::FramingError);
+                return Err(Error::Framing);
             }
             if error_status.contains(Data::PE) {
-                return Err(Error::ParityError);
+                return Err(Error::Parity);
             }
             if error_status.contains(Data::BE) {
-                return Err(Error::BreakError);
+                return Err(Error::Break);
             }
             if error_status.contains(Data::OE) {
-                return Err(Error::OverrunError);
+                return Err(Error::Overrun);
             }
             Ok(Some(data as u8))
         }
