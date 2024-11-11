@@ -155,13 +155,17 @@ struct Registers {
     _reserved13: [u8; 3],
 }
 
-/// PL011 Errors
+/// Errors which may occur reading from a PL011 UART.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    Framing,
-    Parity,
+    /// Break condition detected.
     Break,
+    /// The received character did not have a valid stop bit.
+    Framing,
+    /// Data was received while the FIFO was already full.
     Overrun,
+    /// Parity of the received data character did not match the selected parity.
+    Parity,
 }
 
 impl embedded_io::Error for Error {
