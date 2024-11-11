@@ -15,7 +15,25 @@ use core::convert::Infallible;
 use core::fmt;
 use core::hint::spin_loop;
 use core::ptr::{addr_of, addr_of_mut};
-use embedded_io::{ErrorType, Read, ReadReady, Write, WriteReady};
+use embedded_io::{ErrorKind, ErrorType, Read, ReadReady, Write, WriteReady};
+
+bitflags! {
+    /// Flags from Data Register
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Data: u16 {
+        /// Data character.
+        const DATA = 0b11111111;
+        /// Framing error.
+        const FE = 1 << 8;
+        /// Parity error.
+        const PE = 1 << 9;
+        /// Break error.
+        const BE = 1 << 10;
+        /// Overrun error.
+        const OE = 1 << 11;
+    }
+}
 
 bitflags! {
     /// Flags from the UART flag register.
@@ -138,6 +156,21 @@ struct Registers {
     _reserved13: [u8; 3],
 }
 
+/// PL011 Errors
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Error {
+    FramingError,
+    ParityError,
+    BreakError,
+    OverrunError,
+}
+
+impl embedded_io::Error for Error {
+    fn kind(&self) -> ErrorKind {
+        ErrorKind::Other
+    }
+}
+
 /// Driver for a PL011 UART.
 #[derive(Debug)]
 pub struct Uart {
@@ -214,15 +247,27 @@ impl Uart {
 
     /// Reads and returns a pending byte, or `None` if nothing has been
     /// received.
-    pub fn read_byte(&mut self) -> Option<u8> {
+    pub fn read_byte(&mut self) -> Result<Option<u8>, Error> {
         if self.flags().contains(Flags::RXFE) {
-            None
+            Ok(None)
         } else {
             // SAFETY: self.registers points to the control registers of a PL011 device which is
             // appropriately mapped, as promised by the caller of `Uart::new`.
             let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
-            // TODO: Check for error conditions in bits 8-11.
-            Some(data as u8)
+            let error_status = Data::from_bits_truncate(data);
+            if error_status.contains(Data::FE) {
+                return Err(Error::FramingError);
+            }
+            if error_status.contains(Data::PE) {
+                return Err(Error::ParityError);
+            }
+            if error_status.contains(Data::BE) {
+                return Err(Error::BreakError);
+            }
+            if error_status.contains(Data::OE) {
+                return Err(Error::OverrunError);
+            }
+            Ok(Some(data as u8))
         }
     }
 
@@ -250,7 +295,7 @@ unsafe impl Send for Uart {}
 unsafe impl Sync for Uart {}
 
 impl ErrorType for Uart {
-    type Error = Infallible;
+    type Error = Error;
 }
 
 impl Write for Uart {
@@ -284,7 +329,7 @@ impl Read for Uart {
         }
 
         loop {
-            if let Some(byte) = self.read_byte() {
+            if let Some(byte) = self.read_byte()? {
                 buf[0] = byte;
                 return Ok(1);
             }
