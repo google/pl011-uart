@@ -170,7 +170,10 @@ pub enum Error {
 
 impl embedded_io::Error for Error {
     fn kind(&self) -> ErrorKind {
-        ErrorKind::Other
+        match self {
+            Self::Break | Self::Overrun => ErrorKind::Other,
+            Self::Framing | Self::Parity => ErrorKind::InvalidData,
+        }
     }
 }
 
