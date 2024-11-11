@@ -13,7 +13,6 @@
 use bitflags::bitflags;
 use core::fmt;
 use core::hint::spin_loop;
-use core::ptr::{addr_of, addr_of_mut};
 use embedded_io::{ErrorKind, ErrorType, Read, ReadReady, Write, WriteReady};
 
 bitflags! {
@@ -213,18 +212,17 @@ impl Uart {
         // appropriately mapped, as promised by the caller of `Uart::new`.
         unsafe {
             // Disable UART before programming.
-            let mut cr: Control = addr_of_mut!((*self.registers).cr).read_volatile();
+            let mut cr: Control = (&raw mut (*self.registers).cr).read_volatile();
             cr &= !Control::UARTEN;
-            addr_of_mut!((*self.registers).cr).write_volatile(cr);
+            (&raw mut (*self.registers).cr).write_volatile(cr);
             // Program Integer Baud Rate.
-            addr_of_mut!((*self.registers).ibrd).write_volatile((divisor >> 6).try_into().unwrap());
+            (&raw mut (*self.registers).ibrd).write_volatile((divisor >> 6).try_into().unwrap());
             // Program Fractional Baud Rate.
-            addr_of_mut!((*self.registers).fbrd)
-                .write_volatile((divisor & 0x3F).try_into().unwrap());
+            (&raw mut (*self.registers).fbrd).write_volatile((divisor & 0x3F).try_into().unwrap());
             // Clear any pending errors.
-            addr_of_mut!((*self.registers).rsr).write_volatile(ReceiveStatus::empty());
+            (&raw mut (*self.registers).rsr).write_volatile(ReceiveStatus::empty());
             // Enable UART.
-            addr_of_mut!((*self.registers).cr)
+            (&raw mut (*self.registers).cr)
                 .write_volatile(Control::RXE | Control::TXE | Control::UARTEN);
         }
     }
@@ -244,7 +242,7 @@ impl Uart {
         // appropriately mapped, as promised by the caller of `Uart::new`.
         unsafe {
             // Write to the TX buffer.
-            addr_of_mut!((*self.registers).dr).write_volatile(u16::from(byte));
+            (&raw mut (*self.registers).dr).write_volatile(u16::from(byte));
         }
     }
 
@@ -263,7 +261,7 @@ impl Uart {
         } else {
             // SAFETY: self.registers points to the control registers of a PL011 device which is
             // appropriately mapped, as promised by the caller of `Uart::new`.
-            let data = unsafe { addr_of!((*self.registers).dr).read_volatile() };
+            let data = unsafe { (&raw const (*self.registers).dr).read_volatile() };
             let error_status = Data::from_bits_truncate(data);
             if error_status.contains(Data::FE) {
                 return Err(Error::Framing);
@@ -284,7 +282,7 @@ impl Uart {
     fn flags(&self) -> Flags {
         // SAFETY: self.registers points to the control registers of a PL011 device which is
         // appropriately mapped, as promised by the caller of `Uart::new`.
-        unsafe { addr_of!((*self.registers).fr).read_volatile() }
+        unsafe { (&raw const (*self.registers).fr).read_volatile() }
     }
 }
 
