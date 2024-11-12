@@ -11,6 +11,7 @@ authors = [
 repository = "https://github.com/google/pl011-uart"
 keywords = ["arm", "aarch64", "driver", "uart", "pl011"]
 categories = ["embedded", "no-std", "hardware-support"]
+rust-version = "1.82"
 
 [dependencies]
 bitflags = "2.3.2"
