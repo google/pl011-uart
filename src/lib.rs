@@ -108,6 +108,66 @@ bitflags! {
     }
 }
 
+bitflags! {
+    /// Flags from the UART Interrupt Mask Set/Clear Register.
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct InterruptMask: u16 {
+        /// nUARTRI modem interrupt.
+        const RIMIM = 1 << 0;
+        /// nUARTCTS modem interrupt.
+        const CTSMIM = 1 << 1;
+        /// nUARTDCD modem interrupt.
+        const DCDMIM = 1 << 2;
+        /// nUARTDSR modem interrupt.
+        const DSRMIM = 1 << 3;
+        /// Receive interrupt.
+        const RXIM = 1 << 4;
+        /// Transmit interrupt.
+        const TXIM = 1 << 5;
+        /// Receive timeout interrupt.
+        const RTIM = 1 << 6;
+        /// Framing error interrupt.
+        const FEIM = 1 << 7;
+        /// Parity error interrupt.
+        const PEIM = 1 << 8;
+        /// Break error interrupt.
+        const BEIM = 1 << 9;
+        /// Overrun error interrupt.
+        const OEIM = 1 << 10;
+    }
+}
+
+bitflags! {
+    /// Flags from the UART Interrupt Clear Register.
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct InterruptClear: u16 {
+        /// nUARTRI modem interrupt.
+        const RIMIC = 1 << 0;
+        /// nUARTCTS modem interrupt.
+        const CTSMIC = 1 << 1;
+        /// nUARTDCD modem interrupt.
+        const DCDMIC = 1 << 2;
+        /// nUARTDSR modem interrupt.
+        const DSRMIC = 1 << 3;
+        /// Receive interrupt.
+        const RXIC = 1 << 4;
+        /// Transmit interrupt.
+        const TXIC = 1 << 5;
+        /// Receive timeout interrupt.
+        const RTIC = 1 << 6;
+        /// Framing error interrupt.
+        const FEIC = 1 << 7;
+        /// Parity error interrupt.
+        const PEIC = 1 << 8;
+        /// Break error interrupt.
+        const BEIC = 1 << 9;
+        /// Overrun error interrupt.
+        const OEIC = 1 << 10;
+    }
+}
+
 #[repr(C, align(4))]
 struct Registers {
     /// Data Register.
@@ -138,7 +198,7 @@ struct Registers {
     ifls: u8,
     _reserved8: [u8; 3],
     /// Interrupt Mask Set/Clear Register.
-    imsc: u16,
+    imsc: InterruptMask,
     _reserved9: [u8; 2],
     /// Raw Interrupt Status Register.
     ris: u16,
@@ -147,7 +207,7 @@ struct Registers {
     mis: u16,
     _reserved11: [u8; 2],
     /// Interrupt Clear Register.
-    icr: u16,
+    icr: InterruptClear,
     _reserved12: [u8; 2],
     /// DMA Control Register.
     dmacr: u8,
@@ -224,6 +284,33 @@ impl Uart {
             // Enable UART.
             (&raw mut (*self.registers).cr)
                 .write_volatile(Control::RXE | Control::TXE | Control::UARTEN);
+        }
+    }
+
+    /// Enables RX interrupt.
+    ///
+    /// enable: true to enable RX interrupt, false to disable RX interrupt.
+    pub fn enable_rx_interrupt(&mut self, enable: bool) {
+        // SAFETY: self.registers points to the control registers of a PL011 device which is
+        // appropriately mapped, as promised by the caller of `Uart::new`.
+        unsafe {
+            let mut imsc: InterruptMask = (&raw mut (*self.registers).imsc).read_volatile();
+
+            match enable {
+                true => imsc |= InterruptMask::RXIM,
+                false => imsc &= !InterruptMask::RXIM,
+            };
+
+            (&raw mut (*self.registers).imsc).write_volatile(imsc);
+        }
+    }
+
+    /// Clears RX interrupts.
+    pub fn ack_rx_interrupt(&mut self) {
+        // SAFETY: self.registers points to the control registers of a PL011 device which is
+        // appropriately mapped, as promised by the caller of `Uart::new`.
+        unsafe {
+            (&raw mut (*self.registers).icr).write_volatile(InterruptClear::RXIC);
         }
     }
 
