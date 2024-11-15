@@ -7,6 +7,29 @@ A Rust driver for the Arm [PL011 UART](https://developer.arm.com/documentation/d
 
 This is not an officially supported Google product.
 
+## Usage
+
+Basic usage of the pl011-uart crate
+
+```rust
+use pl011_uart::Uart;
+use core::fmt::Write;
+
+fn main() {
+    // constants required for initializing the UART.
+    const PL011_BASE_ADDRESS: *mut u32 = 0x0900_0000 as _;
+    const PL011_BAUD_RATE: u32 = 115200;
+    const PL011_CLK_IN_HZ: u32 = 50000000;
+
+    // initialize PL011 UART.
+    let mut uart = unsafe { Uart::new(PL011_BASE_ADDRESS) };
+    uart.init(PL011_CLK_IN_HZ, PL011_BAUD_RATE);
+
+    // write to PL011 UART.
+    writeln!(uart, "Hello, World!").unwrap();
+}
+```
+
 ## License
 
 Licensed under either of
