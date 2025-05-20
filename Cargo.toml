@@ -1,6 +1,6 @@
 [package]
 name = "pl011-uart"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A driver for the Arm PL011 UART."
@@ -12,8 +12,3 @@ repository = "https://github.com/google/pl011-uart"
 keywords = ["arm", "aarch64", "driver", "uart", "pl011"]
 categories = ["embedded", "no-std", "hardware-support"]
 rust-version = "1.82"
-
-[dependencies]
-bitflags = "2.3.2"
-embedded-io = "0.6.1"
-thiserror = { version = "2.0.3", default-features = false }
